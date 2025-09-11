@@ -1,0 +1,359 @@
+openapi: 3.0.0
+info:
+  title: Timeflow API
+  version: 1.0.0
+  description: API for employee time tracking with facial recognition
+servers:
+  - url: http://localhost:3000/api
+    description: Local server
+
+paths:
+  /employees/register:
+    post:
+      summary: Register new employee
+      tags:
+        - Employees
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ecNumber:
+                  type: string
+                name:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                departmentId:
+                  type: integer
+                imageBase64:
+                  type: string
+                  description: Base64 encoded image
+      responses:
+        '201':
+          description: Employee registered
+        '400':
+          description: Validation error
+        '500':
+          description: Server error
+
+  /employees/login:
+    post:
+      summary: Employee login
+      tags:
+        - Employees
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ecNumber:
+                  type: string
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  employee:
+                    type: object
+                    properties:
+                      ecNumber:
+                        type: string
+                      name:
+                        type: string
+                      departmentId:
+                        type: integer
+        '400':
+          description: Invalid credentials
+        '500':
+          description: Server error
+
+  /employees/{ecNumber}:
+    get:
+      summary: Get employee details
+      tags:
+        - Employees
+      parameters:
+        - name: ecNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Employee details
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+        '500':
+          description: Server error
+    put:
+      summary: Update employee
+      tags:
+        - Employees
+      parameters:
+        - name: ecNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                departmentId:
+                  type: integer
+      responses:
+        '200':
+          description: Updated
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+        '500':
+          description: Server error
+    delete:
+      summary: Delete employee
+      tags:
+        - Employees
+      parameters:
+        - name: ecNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+        '500':
+          description: Server error
+
+  /departments:
+    post:
+      summary: Create department
+      tags:
+        - Departments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Validation or duplicate error
+        '500':
+          description: Server error
+    get:
+      summary: Get all departments
+      tags:
+        - Departments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of departments
+        '500':
+          description: Server error
+  /departments/{id}:
+    put:
+      summary: Update department
+      tags:
+        - Departments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated
+        '400':
+          description: Validation or duplicate error
+        '404':
+          description: Not found
+        '500':
+          description: Server error
+    delete:
+      summary: Delete department
+      tags:
+        - Departments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Deleted
+        '404':
+          description: Not found
+        '500':
+          description: Server error
+
+  /check-in:
+    post:
+      summary: Employee check-in
+      tags:
+        - Attendance
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ecNumber:
+                  type: string
+                imageBase64:
+                  type: string
+      responses:
+        '200':
+          description: Check-in successful
+        '400':
+          description: Validation or already checked in
+        '401':
+          description: Facial recognition failed
+        '500':
+          description: Server error
+
+  /check-out:
+    post:
+      summary: Employee check-out
+      tags:
+        - Attendance
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ecNumber:
+                  type: string
+                imageBase64:
+                  type: string
+      responses:
+        '200':
+          description: Check-out successful
+        '400':
+          description: Validation or no check-in
+        '401':
+          description: Facial recognition failed
+        '500':
+          description: Server error
+
+  /reports/daily:
+    get:
+      summary: Daily attendance report
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daily report
+        '500':
+          description: Server error
+
+  /reports/employee/{ecNumber}:
+    get:
+      summary: Employee attendance history
+      tags:
+        - Reports
+      parameters:
+        - name: ecNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Employee history
+        '500':
+          description: Server error
+
+  /reports/lateness:
+    get:
+      summary: Lateness report
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lateness report
+        '500':
+          description: Server error
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

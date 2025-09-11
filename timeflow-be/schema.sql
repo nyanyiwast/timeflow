@@ -1,0 +1,31 @@
+CREATE DATABASE IF NOT EXISTS timeflow_db;
+USE timeflow_db;
+
+CREATE TABLE IF NOT EXISTS departments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS employees (
+  ec_number VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  department_id INT,
+  face_encoding LONGBLOB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS attendance_records (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ec_number VARCHAR(50) NOT NULL,
+  date DATE NOT NULL,
+  check_in_time DATETIME,
+  check_out_time DATETIME,
+  total_hours DECIMAL(5,2),
+  is_late BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ec_number) REFERENCES employees(ec_number) ON DELETE CASCADE,
+  UNIQUE KEY unique_attendance (ec_number, date)
+);
