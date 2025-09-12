@@ -31,7 +31,11 @@ const Register = () => {
     setLoading(true);
 
     try {
-      await postData('/employees/register', {
+      if (!imageBase64) {
+        throw new Error('Please upload a face image');
+      }
+
+      const response = await postData('/employees/register', {
         ecNumber: formData.ecNumber,
         name: formData.name,
         password: formData.password,
@@ -39,11 +43,15 @@ const Register = () => {
         imageBase64,
       });
 
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
       toast.success('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
       console.error('Registration error:', err);
-      toast.error('Registration failed');
+      toast.error(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -115,14 +123,27 @@ const Register = () => {
               <Input
                 type="file"
                 accept="image/*"
+                capture="environment"
                 onChange={(e) => {
                   const file = e.target.files[0];
                   if (file) {
+                    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                      toast.error('Image size should be less than 5MB');
+                      return;
+                    }
                     const reader = new FileReader();
-                    reader.onloadend = () => setImageBase64(reader.result);
+                    reader.onloadend = () => {
+                      // Extract just the base64 data part
+                      const base64Data = reader.result.split(',')[1];
+                      setImageBase64(base64Data);
+                    };
+                    reader.onerror = () => {
+                      toast.error('Error reading image file');
+                    };
                     reader.readAsDataURL(file);
                   }
                 }}
+                required
               />
             </div>
             <Button type="submit" className="w-full bg-green-500 hover:bg-green-600" disabled={loading}>
