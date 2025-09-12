@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS departments (
   name VARCHAR(255) NOT NULL UNIQUE
 );
 
+-- Insert default department
+INSERT INTO departments (name) VALUES ('Administration') ON DUPLICATE KEY UPDATE name=name;
+
 CREATE TABLE IF NOT EXISTS employees (
   ec_number VARCHAR(50) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -16,6 +19,12 @@ CREATE TABLE IF NOT EXISTS employees (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
 );
+
+-- Insert default admin user (password: 'admin', hashed with bcrypt salt 10)
+-- Note: The hash below is for 'admin'. If you change the password, regenerate the hash.
+INSERT INTO employees (ec_number, name, password, department_id, face_encoding) VALUES 
+('admin', 'Administrator', '$2a$10$WHz68QcgA23Uj7oj3SiMeP3sPxP/3eLqL92NYxYogfw36NQAoJgaG', 1, NULL) 
+ON DUPLICATE KEY UPDATE name=name;
 
 CREATE TABLE IF NOT EXISTS attendance_records (
   id INT AUTO_INCREMENT PRIMARY KEY,

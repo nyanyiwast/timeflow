@@ -15,8 +15,32 @@ const Dashboard = () => {
   const handleCheckIn = async () => {
     setLoading(true);
     try {
-      // For demo, use placeholder image; in full, integrate webcam
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGh8hH//wAALCAYAAAB//lc/5lYQ=='; // Placeholder
+      // Capture image from webcam
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+
+      // Wait for video to load
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          video.width = video.videoWidth;
+          video.height = video.videoHeight;
+          resolve();
+        };
+      });
+
+      // Capture frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+      // Stop stream
+      stream.getTracks().forEach(track => track.stop());
+
       await postData('/check-in', {
         ecNumber: user.ecNumber,
         imageBase64,
@@ -24,7 +48,7 @@ const Dashboard = () => {
       toast.success('Check-in successful!');
     } catch (err) {
       console.error('Check-in error:', err);
-      toast.error('Check-in failed');
+      toast.error('Check-in failed: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -33,7 +57,32 @@ const Dashboard = () => {
   const handleCheckOut = async () => {
     setLoading(true);
     try {
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGh8hH//wAALCAYAAAB//lc/5lYQ=='; // Placeholder
+      // Capture image from webcam
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+
+      // Wait for video to load
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          video.width = video.videoWidth;
+          video.height = video.videoHeight;
+          resolve();
+        };
+      });
+
+      // Capture frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+      // Stop stream
+      stream.getTracks().forEach(track => track.stop());
+
       await postData('/check-out', {
         ecNumber: user.ecNumber,
         imageBase64,
@@ -41,7 +90,7 @@ const Dashboard = () => {
       toast.success('Check-out successful!');
     } catch (err) {
       console.error('Check-out error:', err);
-      toast.error('Check-out failed');
+      toast.error('Check-out failed: ' + err.message);
     } finally {
       setLoading(false);
     }

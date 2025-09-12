@@ -1,16 +1,25 @@
 const fs = require('fs');
 const path = require('path');
-const canvas = require('canvas');
-const faceapi = require('face-api.js');
-const { Canvas, Image, ImageData } = canvas;
-faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
+const logger = require('../config/logger');
+
+let canvas = null;
+let faceapi = null;
+let { Canvas, Image, ImageData } = {};
+try {
+  canvas = require('canvas');
+  faceapi = require('face-api.js');
+  ({ Canvas, Image, ImageData } = canvas);
+  faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
+} catch (err) {
+  logger.warn('Canvas not available, face recognition disabled: %s', err.message);
+}
 
 const MODELS_PATH = path.join(__dirname, '../models');
 
 let modelsLoaded = false;
 
 async function loadModels() {
-  if (modelsLoaded) return;
+  if (modelsLoaded || !faceapi) return;
 
   await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODELS_PATH);
   await faceapi.nets.faceLandmark68Net.loadFromDisk(MODELS_PATH);
@@ -19,6 +28,9 @@ async function loadModels() {
 }
 
 async function enroll(ecNumber, imageBase64) {
+  if (!canvas || !faceapi) {
+    throw new Error('Face recognition not available: canvas module not installed');
+  }
   await loadModels();
 
   // Decode base64 to buffer
@@ -42,6 +54,9 @@ async function enroll(ecNumber, imageBase64) {
 }
 
 async function verify(ecNumber, imageBase64) {
+  if (!canvas || !faceapi) {
+    throw new Error('Face recognition not available: canvas module not installed');
+  }
   await loadModels();
 
   // Decode base64 to buffer

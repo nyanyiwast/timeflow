@@ -7,6 +7,8 @@ const swaggerUi = require('swagger-ui-express');
 const yaml = require('js-yaml');
 const fs = require('fs');
 
+const logger = require('./config/logger');
+
 const employeeRoutes = require('./routes/employees');
 const departmentRoutes = require('./routes/departments');
 const attendanceRoutes = require('./routes/attendance');
@@ -15,6 +17,16 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  req.on('end', () => {
+    const duration = Date.now() - start;
+    logger.info(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms - ${req.ip}`);
+  });
+  next();
+});
 
 app.use(helmet());
 app.use(cors());
@@ -36,5 +48,5 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`);
 });

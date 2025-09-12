@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 const axios = require('axios');
 const verifyToken = require('../middleware/auth');
+const faceService = require('../services/faceService');
 
 // Validation schemas
 const registerSchema = Joi.object({
@@ -51,9 +52,17 @@ router.post('/register', async (req, res) => {
    try {
      const { descriptor } = await faceService.enroll(ecNumber, imageBase64);
      faceEncoding = JSON.stringify(descriptor); // Store as JSON string in DB
+     logger.info(`Face enrollment successful for employee ${ecNumber}`);
    } catch (faceErr) {
-     console.error('Face enrollment failed:', faceErr);
+     logger.error('Face enrollment failed for %s: %s', ecNumber, faceErr.message);
      // Continue without encoding for now
+     faceEncoding = null;
+   }
+
+   // Check if department exists
+   const [dept] = await pool.execute('SELECT id FROM departments WHERE id = ?', [departmentId]);
+   if (dept.length === 0) {
+     return res.status(400).json({ error: 'Invalid department ID' });
    }
 
    // Insert into DB
@@ -67,51 +76,55 @@ router.post('/register', async (req, res) => {
      ecNumber
    });
  } catch (err) {
-   console.error(err);
+   logger.error('Registration error for %s: %s', ecNumber, err.message);
    res.status(500).json({ error: 'Internal server error' });
  }
 });
 
 // POST /api/employees/login
 router.post('/login', async (req, res) => {
- try {
-   const { error } = loginSchema.validate(req.body);
-   if (error) {
-     return res.status(400).json({ error: error.details[0].message });
-   }
+  try {
+    const { error } = loginSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
 
-   const { ecNumber, password } = req.body;
+    const { ecNumber, password } = req.body;
 
-   // Find employee
-   const [rows] = await pool.execute('SELECT * FROM employees WHERE ec_number = ?', [ecNumber]);
-   if (rows.length === 0) {
-     return res.status(400).json({ error: 'Invalid credentials' });
-   }
+    // Find employee
+    const [rows] = await pool.execute('SELECT * FROM employees WHERE ec_number = ?', [ecNumber]);
+    if (rows.length === 0) {
+      logger.warn('Login attempt with invalid ecNumber: %s', ecNumber);
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
 
-   const employee = rows[0];
+    const employee = rows[0];
 
-   // Check password
-   const validPassword = await bcrypt.compare(password, employee.password);
-   if (!validPassword) {
-     return res.status(400).json({ error: 'Invalid credentials' });
-   }
+    // Check password
+    const validPassword = await bcrypt.compare(password, employee.password);
+    if (!validPassword) {
+      logger.warn('Login attempt with invalid password for ecNumber: %s', ecNumber);
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
 
-   // Generate JWT
-   const token = jwt.sign({ ecNumber: employee.ec_number }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // Generate JWT
+    const token = jwt.sign({ ecNumber: employee.ec_number }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-   res.json({
-     message: 'Login successful',
-     token,
-     employee: {
-       ecNumber: employee.ec_number,
-       name: employee.name,
-       departmentId: employee.department_id
-     }
-   });
- } catch (err) {
-   console.error(err);
-   res.status(500).json({ error: 'Internal server error' });
- }
+    logger.info('Login successful for employee: %s', ecNumber);
+
+    res.json({
+      message: 'Login successful',
+      token,
+      employee: {
+        ecNumber: employee.ec_number,
+        name: employee.name,
+        departmentId: employee.department_id
+      }
+    });
+  } catch (err) {
+    logger.error('Login error for %s: %s', ecNumber, err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // GET /api/employees/:ecNumber
@@ -119,15 +132,30 @@ router.get('/:ecNumber', async (req, res) => {
   try {
     const { ecNumber } = req.params;
 
-    // TODO: Fetch from DB
-    // Placeholder
-    res.json({ 
-      ecNumber,
-      name: 'John Doe',
-      departmentId: 1,
-      faceEncoding: null // Would be binary data
+    // Fetch from DB
+    const [rows] = await pool.execute(`
+      SELECT e.*, d.name as department_name
+      FROM employees e
+      LEFT JOIN departments d ON e.department_id = d.id
+      WHERE e.ec_number = ?
+    `, [ecNumber]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    const employee = rows[0];
+    logger.info('Fetched employee data for: %s', ecNumber);
+
+    res.json({
+      ecNumber: employee.ec_number,
+      name: employee.name,
+      departmentId: employee.department_id,
+      departmentName: employee.department_name,
+      faceEncoding: employee.face_encoding ? employee.face_encoding.toString('base64') : null // Convert binary to base64 if needed
     });
   } catch (err) {
+    logger.error('Error fetching employee %s: %s', ecNumber, err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
