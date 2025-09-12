@@ -61,8 +61,14 @@ const Dashboard = () => {
   const handleCheckOut = async () => {
     setLoading(true);
     try {
-      // Capture image from webcam
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Show camera preview modal or directly capture
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: 640,
+          height: 480,
+          facingMode: 'user'
+        }
+      });
       const video = document.createElement('video');
       video.srcObject = stream;
       video.play();
@@ -70,16 +76,18 @@ const Dashboard = () => {
       // Wait for video to load
       await new Promise((resolve) => {
         video.onloadedmetadata = () => {
-          video.width = video.videoWidth;
-          video.height = video.videoHeight;
+          video.width = 640;
+          video.height = 480;
           resolve();
         };
       });
 
-      // Capture frame
+      // Capture frame after short delay for preview effect
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second preview
+
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = 640;
+      canvas.height = 480;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0);
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
@@ -87,14 +95,14 @@ const Dashboard = () => {
       // Stop stream
       stream.getTracks().forEach(track => track.stop());
 
-      await postData('/check-out', {
+      const response = await postData('/check-out', {
         ecNumber: user.ecNumber,
         imageBase64,
       });
-      toast.success('Check-out successful!');
+      toast.success(response.message);
     } catch (err) {
       console.error('Check-out error:', err);
-      toast.error('Check-out failed: ' + err.message);
+      toast.error('Check-out failed: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
     }

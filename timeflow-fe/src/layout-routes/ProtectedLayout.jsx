@@ -19,9 +19,15 @@ const ProtectedLayout = () => {
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-bold text-green-600">TimeFlow</h1>
-              <Badge variant="secondary" className="ml-2">
-                {user.name}
-              </Badge>
+              {user ? (
+                <Badge variant="secondary" className="ml-2">
+                  {user.name}
+                </Badge>
+              ) : (
+                <Badge variant="destructive" className="ml-2">
+                  Not Logged In
+                </Badge>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <nav className="hidden md:flex space-x-6">

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
 const pool = require('../config/db');
+const logger = require('../config/logger');
 const axios = require('axios');
 
 const checkInOutSchema = Joi.object({
@@ -18,7 +19,8 @@ async function verifyFace(ecNumber, imageBase64) {
     });
     return response.data.match; // Assume { match: true/false }
   } catch (err) {
-    throw new Error('Facial recognition verification failed');
+    logger.error('Face verification failed: %s', err.message);
+    return false;
   }
 }
 
@@ -32,10 +34,15 @@ router.post('/check-in', async (req, res) => {
 
     const { ecNumber, imageBase64 } = req.body;
 
-    // Verify face
+    let verified = true;
+    let selfieImage = null;
+
+    // Attempt face verification
     const isMatch = await verifyFace(ecNumber, imageBase64);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Facial recognition failed. Access denied.' });
+      logger.warn('Face verification failed for %s, saving as manual entry with selfie', ecNumber);
+      verified = false;
+      selfieImage = imageBase64; // Save the captured image as selfie
     }
 
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -56,18 +63,19 @@ router.post('/check-in', async (req, res) => {
 
     // Insert record
     await pool.execute(
-      'INSERT INTO attendance_records (ec_number, date, check_in_time, is_late) VALUES (?, ?, ?, ?)',
-      [ecNumber, today, checkInTime, isLate]
+      'INSERT INTO attendance_records (ec_number, date, check_in_time, is_late, verified, selfie_image) VALUES (?, ?, ?, ?, ?, ?)',
+      [ecNumber, today, checkInTime, isLate, verified, selfieImage]
     );
 
-    res.status(200).json({ 
-      message: 'Check-in successful',
+    res.status(200).json({
+      message: verified ? 'Check-in successful' : 'Check-in recorded with selfie (manual verification needed)',
       ecNumber,
       checkInTime: checkInTime.toISOString(),
-      isLate 
+      isLate,
+      verified
     });
   } catch (err) {
-    console.error(err);
+    logger.error('Check-in error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -82,10 +90,15 @@ router.post('/check-out', async (req, res) => {
 
     const { ecNumber, imageBase64 } = req.body;
 
-    // Verify face
+    let verified = true;
+    let selfieImage = null;
+
+    // Attempt face verification
     const isMatch = await verifyFace(ecNumber, imageBase64);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Facial recognition failed. Access denied.' });
+      logger.warn('Face verification failed for %s check-out, saving as manual entry with selfie', ecNumber);
+      verified = false;
+      selfieImage = imageBase64; // Save the captured image as selfie for check-out
     }
 
     const today = new Date().toISOString().split('T')[0];
@@ -106,18 +119,19 @@ router.post('/check-out', async (req, res) => {
 
     // Update record
     await pool.execute(
-      'UPDATE attendance_records SET check_out_time = ?, total_hours = ? WHERE ec_number = ? AND date = ?',
-      [checkOutTime, totalHours, ecNumber, today]
+      'UPDATE attendance_records SET check_out_time = ?, total_hours = ?, verified = ?, selfie_image = ? WHERE ec_number = ? AND date = ?',
+      [checkOutTime, totalHours, verified, selfieImage, ecNumber, today]
     );
 
-    res.status(200).json({ 
-      message: 'Check-out successful',
+    res.status(200).json({
+      message: verified ? 'Check-out successful' : 'Check-out recorded with selfie (manual verification needed)',
       ecNumber,
       checkOutTime: checkOutTime.toISOString(),
-      totalHours: totalHours.toFixed(2)
+      totalHours: totalHours.toFixed(2),
+      verified
     });
   } catch (err) {
-    console.error(err);
+    logger.error('Check-out error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
