@@ -116,6 +116,21 @@ const Dashboard = () => {
                   {user.departmentId && <Badge variant="default">Dept ID: {user.departmentId}</Badge>}
                 </div>
 
+                {/* Profile Picture */}
+                <div className="mt-4 text-center">
+                  {user.profilePicture ? (
+                    <img
+                      src={`data:image/jpeg;base64,${user.profilePicture}`}
+                      alt="Profile"
+                      className="w-32 h-32 rounded-full object-cover mx-auto border-2 border-green-500"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-2 border-gray-300">
+                      <User className="h-16 w-16 text-gray-500" />
+                    </div>
+                  )}
+                </div>
+
                 {/* Full User Info from DB */}
                 <div className="mt-4 grid md:grid-cols-2 gap-4 text-sm">
                   <div className="bg-gray-50 p-3 rounded">

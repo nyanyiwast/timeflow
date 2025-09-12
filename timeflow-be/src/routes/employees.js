@@ -48,16 +48,24 @@ router.post('/register', async (req, res) => {
    const saltRounds = 10;
    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-   // Enroll face with Node.js service
+   // Store profile picture if provided
+   let profilePicture = null;
    let faceEncoding = null;
    if (imageBase64) {
      try {
+       // Store base64 string (without data URL prefix) for profile picture
+       profilePicture = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+
+       // Attempt face enrollment
        const { descriptor } = await faceService.enroll(ecNumber, imageBase64);
        faceEncoding = Buffer.from(JSON.stringify(descriptor)); // Store as Buffer for LONGBLOB
        logger.info(`Face enrollment successful for employee ${ecNumber}`);
      } catch (faceErr) {
        logger.error('Face enrollment failed for %s: %s', ecNumber, faceErr.message);
-       // Continue without encoding for now
+       // Still store profile picture even if face enrollment fails
+       if (imageBase64) {
+         profilePicture = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+       }
        faceEncoding = null;
      }
    } else {
@@ -72,8 +80,8 @@ router.post('/register', async (req, res) => {
 
    // Insert into DB
    await pool.execute(
-     'INSERT INTO employees (ec_number, name, password, department_id, face_encoding) VALUES (?, ?, ?, ?, ?)',
-     [ecNumber, name, hashedPassword, departmentId, faceEncoding]
+     'INSERT INTO employees (ec_number, name, password, department_id, profile_picture, face_encoding) VALUES (?, ?, ?, ?, ?, ?)',
+     [ecNumber, name, hashedPassword, departmentId, profilePicture, faceEncoding]
    );
 
    res.status(201).json({
@@ -106,7 +114,7 @@ router.post('/login', async (req, res) => {
     const employee = rows[0];
 
     // Check password
-    const validPassword = await bcrypt.compare(password, employee.password);
+    const validPassword = await bcrypt.compare(password, employee.password.toString());
     if (!validPassword) {
       logger.warn('Login attempt with invalid password for ecNumber: %s', ecNumber);
       return res.status(400).json({ error: 'Invalid credentials' });
@@ -157,6 +165,7 @@ router.get('/:ecNumber', async (req, res) => {
       name: employee.name,
       departmentId: employee.department_id,
       departmentName: employee.department_name,
+      profilePicture: employee.profile_picture || null,
       faceEncoding: employee.face_encoding ? employee.face_encoding.toString('base64') : null // Convert binary to base64 if needed
     });
   } catch (err) {

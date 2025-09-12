@@ -16,6 +16,7 @@ const Register = () => {
     departmentId: 1, // Default department; can be selected from dropdown
   });
   const [imageBase64, setImageBase64] = useState('');
+  const [preview, setPreview] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -120,11 +121,22 @@ const Register = () => {
                   const file = e.target.files[0];
                   if (file) {
                     const reader = new FileReader();
-                    reader.onloadend = () => setImageBase64(reader.result);
+                    reader.onloadend = () => {
+                      setImageBase64(reader.result);
+                      setPreview(reader.result);
+                    };
                     reader.readAsDataURL(file);
+                  } else {
+                    setImageBase64('');
+                    setPreview('');
                   }
                 }}
               />
+              {preview && (
+                <div className="mt-2">
+                  <img src={preview} alt="Preview" className="w-full h-32 object-cover rounded" />
+                </div>
+              )}
             </div>
             <Button type="submit" className="w-full bg-green-500 hover:bg-green-600" disabled={loading}>
               <UserPlus className="mr-2 h-4 w-4" />
