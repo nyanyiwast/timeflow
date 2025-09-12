@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Camera, Clock, User, Settings } from 'lucide-react';
 import { postData } from '../api/api';
@@ -8,9 +9,12 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const storedUserData = sessionStorage.getItem('user');
+  const user = storedUserData ? JSON.parse(storedUserData).data : null;
 
   const handleCheckIn = async () => {
     setLoading(true);
@@ -101,11 +105,45 @@ const Dashboard = () => {
       <div className="max-w-4xl mx-auto">
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-3xl text-center text-green-600">
-              Welcome back, {user.name}
-            </CardTitle>
+            {user ? (
+              <>
+                <CardTitle className="text-3xl text-center text-green-600">
+                  Welcome back, {user.name}
+                </CardTitle>
+                <div className="space-y-1 text-center">
+                  <Badge variant="secondary">EC Number: {user.ecNumber}</Badge>
+                  {user.departmentName && <Badge variant="outline">Department: {user.departmentName}</Badge>}
+                  {user.departmentId && <Badge variant="default">Dept ID: {user.departmentId}</Badge>}
+                </div>
+
+                {/* Full User Info from DB */}
+                <div className="mt-4 grid md:grid-cols-2 gap-4 text-sm">
+                  <div className="bg-gray-50 p-3 rounded">
+                    <strong>User Info</strong>
+                    <p>Name: {user.name}</p>
+                    <p>EC Number: {user.ecNumber}</p>
+                    <p>Department: {user.departmentName || 'N/A'}</p>
+                    <p>Department ID: {user.departmentId || 'N/A'}</p>
+                  </div>
+                  {user.faceEncoding && (
+                    <div className="bg-blue-50 p-3 rounded">
+                      <strong>Face Data</strong>
+                      <p>Encoding Available: Yes</p>
+                      <p>Size: {atob(user.faceEncoding).length} bytes</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <CardDescription>No user data found. Please log in.</CardDescription>
+                <Button onClick={() => navigate('/login')} className="mt-4">
+                  Go to Login
+                </Button>
+              </div>
+            )}
             <CardDescription className="text-center">
-              Dashboard for {user.ecNumber}
+              Dashboard for {user.name}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -148,7 +186,7 @@ const Dashboard = () => {
                 <Settings className="mr-2 h-4 w-4" />
                 Admin Panel
               </Button>
-              <Button variant="outline" onClick={logout} className="flex-1">
+              <Button variant="outline" onClick={() => { logout(); navigate('/login'); }} className="flex-1">
                 <User className="mr-2 h-4 w-4" />
                 Logout
               </Button>

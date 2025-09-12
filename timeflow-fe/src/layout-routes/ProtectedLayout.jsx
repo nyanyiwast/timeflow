@@ -34,7 +34,7 @@ const ProtectedLayout = () => {
                   Admin
                 </Button>
               </nav>
-              <Button variant="ghost" onClick={logout} className="hover:text-red-600">
+              <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }} className="hover:text-red-600">
                 <LogOut className="h-4 w-4 mr-1" />
                 Logout
               </Button>

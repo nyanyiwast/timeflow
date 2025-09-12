@@ -14,37 +14,64 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(sessionStorage.getItem('token'));
   const [isAdmin, setIsAdmin] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (token) {
-      // Verify token by fetching user profile
-      api.get('/employees/' + JSON.parse(atob(token.split('.')[1])).ecNumber)
+      // Try to load user from sessionStorage first
+      const storedUser = sessionStorage.getItem('user');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setIsAdmin(parsedUser.role === 'admin' || parsedUser.ecNumber === 'admin');
+        setLoading(false);
+        return;
+      }
+  
+      // Fetch if not in storage
+      const decodedPayload = JSON.parse(atob(token.split('.')[1]));
+      api.get(`/employees/${decodedPayload.ecNumber}`)
         .then((userData) => {
           setUser(userData);
-          setIsAdmin(userData.role === 'admin'); // Assume role in employee data; adjust backend if needed
+          sessionStorage.setItem('user', JSON.stringify(userData));
+          setIsAdmin(userData.role === 'admin' || userData.ecNumber === 'admin');
           setLoading(false);
         })
         .catch(() => {
           logout();
         });
     } else {
+      // Clear storage on no token
+      sessionStorage.removeItem('user');
       setLoading(false);
     }
   }, [token]);
 
-  const login = (token, userData) => {
-    localStorage.setItem('token', token);
+  const login = async (token, initialUserData) => {
+    sessionStorage.setItem('token', token);
     setToken(token);
-    setUser(userData);
-    setIsAdmin(userData.role === 'admin');
+  
+    try {
+      // Fetch full user profile from DB
+      const fullUser = await api.get(`/employees/${initialUserData.ecNumber}`);
+      setUser(fullUser);
+      sessionStorage.setItem('user', JSON.stringify(fullUser));
+      setIsAdmin(fullUser.role === 'admin' || fullUser.ecNumber === 'admin'); // Check for admin
+    // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      // Fallback to initial data if fetch fails
+      setUser(initialUserData);
+      sessionStorage.setItem('user', JSON.stringify(initialUserData));
+      setIsAdmin(initialUserData.role === 'admin');
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setToken(null);
     setUser(null);
     setIsAdmin(false);
