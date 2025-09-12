@@ -20,9 +20,10 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
+    const value = e.target.name === 'departmentId' ? parseInt(e.target.value, 10) : e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: value,
     });
   };
 

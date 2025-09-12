@@ -4,6 +4,7 @@ const Joi = require('joi');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
+const logger = require('../config/logger');
 const axios = require('axios');
 const verifyToken = require('../middleware/auth');
 const faceService = require('../services/faceService');
@@ -14,7 +15,7 @@ const registerSchema = Joi.object({
  name: Joi.string().min(1).max(255).required(),
  password: Joi.string().min(6).required(),
  departmentId: Joi.number().integer().positive().required(),
- imageBase64: Joi.string().required().description('Base64 encoded image for facial recognition')
+ imageBase64: Joi.string().optional().description('Base64 encoded image for facial recognition')
 });
 
 const updateSchema = Joi.object({
@@ -49,14 +50,18 @@ router.post('/register', async (req, res) => {
 
    // Enroll face with Node.js service
    let faceEncoding = null;
-   try {
-     const { descriptor } = await faceService.enroll(ecNumber, imageBase64);
-     faceEncoding = JSON.stringify(descriptor); // Store as JSON string in DB
-     logger.info(`Face enrollment successful for employee ${ecNumber}`);
-   } catch (faceErr) {
-     logger.error('Face enrollment failed for %s: %s', ecNumber, faceErr.message);
-     // Continue without encoding for now
-     faceEncoding = null;
+   if (imageBase64) {
+     try {
+       const { descriptor } = await faceService.enroll(ecNumber, imageBase64);
+       faceEncoding = Buffer.from(JSON.stringify(descriptor)); // Store as Buffer for LONGBLOB
+       logger.info(`Face enrollment successful for employee ${ecNumber}`);
+     } catch (faceErr) {
+       logger.error('Face enrollment failed for %s: %s', ecNumber, faceErr.message);
+       // Continue without encoding for now
+       faceEncoding = null;
+     }
+   } else {
+     logger.info(`No image provided for employee ${ecNumber}, skipping face enrollment`);
    }
 
    // Check if department exists
@@ -76,7 +81,7 @@ router.post('/register', async (req, res) => {
      ecNumber
    });
  } catch (err) {
-   logger.error('Registration error for %s: %s', ecNumber, err.message);
+   logger.error('Registration error', err);
    res.status(500).json({ error: 'Internal server error' });
  }
 });
@@ -122,7 +127,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    logger.error('Login error for %s: %s', ecNumber, err.message);
+    logger.error('Login error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -155,7 +160,7 @@ router.get('/:ecNumber', async (req, res) => {
       faceEncoding: employee.face_encoding ? employee.face_encoding.toString('base64') : null // Convert binary to base64 if needed
     });
   } catch (err) {
-    logger.error('Error fetching employee %s: %s', ecNumber, err.message);
+    logger.error('Error fetching employee', { ecNumber, error: err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -176,6 +181,7 @@ router.put('/:ecNumber', async (req, res) => {
       ecNumber 
     });
   } catch (err) {
+    logger.error('Error updating employee', { ecNumber, error: err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -191,6 +197,7 @@ router.delete('/:ecNumber', async (req, res) => {
       ecNumber 
     });
   } catch (err) {
+    logger.error('Error deleting employee', { ecNumber, error: err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
