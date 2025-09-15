@@ -15,7 +15,7 @@ const Login = () => {
   const [ecNumber, setEcNumber] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const { login, isAdmin } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -28,14 +28,23 @@ const Login = () => {
         password,
       })
 
-      await login(data.token, data.employee)
+      console.log("[v0] Login response:", data)
+      console.log("[v0] Employee role:", data.employee.role)
+
+      const userRole = await login(data.token, data.employee)
+      console.log("[v0] Login completed, user role:", userRole)
+
       toast.success("Login successful!")
-      // Redirect based on role after login completes
-  if (isAdmin) {
-    navigate("/app/admin")
-  } else {
-    navigate("/app")
-  }
+
+      setTimeout(() => {
+        if (data.employee.role === "admin") {
+          console.log("[v0] Redirecting to admin")
+          navigate("/app/admin")
+        } else {
+          console.log("[v0] Redirecting to dashboard")
+          navigate("/app")
+        }
+      }, 100)
     } catch (err) {
       console.error("Login error:", err)
       toast.error("Invalid credentials")

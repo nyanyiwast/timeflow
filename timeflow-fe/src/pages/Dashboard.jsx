@@ -11,7 +11,8 @@ import { toast } from "sonner"
 import { useNavigate } from "react-router-dom"
 
 const Dashboard = () => {
-  const { logout } = useAuth()
+  // eslint-disable-next-line no-unused-vars
+  const { logout, user: authUser, isAdmin } = useAuth()
   const [loading, setLoading] = useState(false)
   const [showCamera, setShowCamera] = useState(false)
   const [cameraAction, setCameraAction] = useState(null)
@@ -21,7 +22,7 @@ const Dashboard = () => {
   const navigate = useNavigate()
 
   const storedUserData = sessionStorage.getItem("user")
-  const user = storedUserData ? JSON.parse(storedUserData).data : null
+  const user = authUser || (storedUserData ? JSON.parse(storedUserData) : null)
 
   const initializeCamera = async (action) => {
     try {
@@ -217,6 +218,12 @@ const Dashboard = () => {
                       <Zap className="h-3 w-3 mr-1" />
                       EC: {user.ecNumber}
                     </Badge>
+                    <Badge
+                      className={`font-mono ${user.role === "admin" ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-blue-500/20 text-blue-400 border-blue-500/30"}`}
+                    >
+                      <Shield className="h-3 w-3 mr-1" />
+                      ROLE: {user.role?.toUpperCase() || "EMPLOYEE"}
+                    </Badge>
                     {user.departmentName && (
                       <Badge className="bg-secondary/20 text-secondary border-secondary/30 font-mono">
                         <Shield className="h-3 w-3 mr-1" />
@@ -351,6 +358,14 @@ const Dashboard = () => {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground font-mono">DEPT:</span>
                           <span className="text-card-foreground">{user.departmentName || "UNASSIGNED"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-mono">ROLE:</span>
+                          <span
+                            className={`font-mono font-semibold ${user.role === "admin" ? "text-red-400" : "text-blue-400"}`}
+                          >
+                            {user.role?.toUpperCase() || "EMPLOYEE"}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground font-mono">ID:</span>
