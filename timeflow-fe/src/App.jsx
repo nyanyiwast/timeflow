@@ -14,6 +14,14 @@ const ProtectedRoute = ({ children }) => {
   return token ? children : <Navigate to="/login" />;
 };
 
+const AdminProtectedRoute = ({ children }) => {
+  const { token, isAdmin } = useAuth();
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+  return isAdmin ? children : <Navigate to="/app" />;
+};
+
 const AppContent = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100">
@@ -22,8 +30,8 @@ const AppContent = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/app" element={<ProtectedLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="admin" element={<Admin />} />
+          <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="admin" element={<AdminProtectedRoute><Admin /></AdminProtectedRoute>} />
         </Route>
       </Routes>
       <Toaster />

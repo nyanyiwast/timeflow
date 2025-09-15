@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
       // Fallback to initial data if fetch fails
       setUser(initialUserData);
       sessionStorage.setItem('user', JSON.stringify(initialUserData));
-      setIsAdmin(initialUserData.role === 'admin');
+      setIsAdmin(initialUserData.role === 'admin' || initialUserData.ecNumber === 'admin');
     }
   };
 
@@ -81,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     user,
     token,
     isAdmin,
+    loading,
     login,
     logout,
   };

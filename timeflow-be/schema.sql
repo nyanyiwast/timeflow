@@ -16,16 +16,17 @@ CREATE TABLE IF NOT EXISTS employees (
   department_id INT,
   profile_picture TEXT,
   face_encoding LONGBLOB,
+  role ENUM('employee', 'admin') DEFAULT 'employee',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
 );
 
--- Insert default admin user (password: 'admin', hashed with bcrypt salt 10)
+-- Insert default admin user (password: '00000000', hashed with bcrypt salt 10)
 -- Note: The hash below is for 'admin'. If you change the password, regenerate the hash.
-INSERT INTO employees (ec_number, name, password, department_id, profile_picture, face_encoding) VALUES 
-('admin', 'Administrator', '$2a$10$WHz68QcgA23Uj7oj3SiMeP3sPxP/3eLqL92NYxYogfw36NQAoJgaG', 1, NULL, NULL) 
-ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO employees (ec_number, name, password, department_id, profile_picture, face_encoding, role) VALUES 
+('admin', 'Administrator', '$2b$10$enoWsFsWvVRj2Ng8qOH7ButuEZeMbV9my7.15b504VCPSTA32LYhu', 1, NULL, NULL, 'admin') 
+ON DUPLICATE KEY UPDATE name=name, role='admin';
 
 CREATE TABLE IF NOT EXISTS attendance_records (
   id INT AUTO_INCREMENT PRIMARY KEY,

@@ -9,7 +9,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
 
 const ProtectedLayout = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
 
   return (
@@ -92,15 +92,17 @@ const ProtectedLayout = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate("/app/admin")}
-                  className="relative group bg-slate-800/50 border border-purple-500/20 text-purple-300 hover:text-purple-100 hover:bg-purple-500/10 hover:border-purple-400/40 transition-all duration-300 font-mono text-sm px-4 py-2 hover:shadow-lg hover:shadow-purple-500/20"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  ADMIN
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/10 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </Button>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/app/admin")}
+                    className="relative group bg-slate-800/50 border border-purple-500/20 text-purple-300 hover:text-purple-100 hover:bg-purple-500/10 hover:border-purple-400/40 transition-all duration-300 font-mono text-sm px-4 py-2 hover:shadow-lg hover:shadow-purple-500/20"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    ADMIN
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/10 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </Button>
+                )}
               </nav>
 
               <Button
